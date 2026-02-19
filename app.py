@@ -1,58 +1,46 @@
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
-
-# محاولة تحميل مكتبة الذكاء الاصطناعي
-try:
-    import google.generativeai as genai
-    HAS_AI = True
-except ImportError:
-    HAS_AI = False
+import google.generativeai as genai
 
 st.set_page_config(page_title="Job Assistant Pro", layout="wide")
-st.title("🚀 مساعد زكرياء الذكي للبحث عن عمل")
+st.title("🚀 مساعد زكرياء الذكي")
 
-# القائمة الجانبية للساروت
 with st.sidebar:
     st.header("🔑 إعدادات AI")
     user_api_key = st.text_input("لصق Gemini API Key هنا:", type="password")
-    st.info("هاد الساروت هو اللي كيخلي AI يكتب ليك الرسائل بأسلوب بشري.")
 
-# خانات الإدخال
-col1, col2 = st.columns(2)
-with col1:
-    job = st.text_input("المهنة (مثلاً: Koch)")
-with col2:
-    city = st.text_input("المدينة (مثلاً: Berlin)")
+job = st.text_input("المهنة (مثلاً: Koch):")
+city = st.text_input("المدينة (مثلاً: Berlin):")
 
-if st.button("بدأ البحث الذكي"):
-    if job and city:
-        url = f"https://www.gelbeseiten.de/suche/{job}/{city}"
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        r = requests.get(url, headers=headers)
-        soup = BeautifulSoup(r.text, 'html.parser')
-        articles = soup.find_all('article', class_='mod-Treffer')
-        
-        if articles:
-            st.success(f"✅ لقينا {len(articles)} شركة مستهدفة.")
-            for i in articles[:5]: # عرض أول 5 شركات
-                name = i.find('h2').text.strip() if i.find('h2') else "Firma"
-                st.subheader(f"🏢 {name}")
-                
-                # إذا كان الساروت موجود، يكتب الرسالة
-                if HAS_AI and user_api_key:
-                    genai.configure(api_key=user_api_key)
-                    model = genai.GenerativeModel('gemini-pro')
-                    prompt = f"Schreibe eine kurze, persönliche E-Mail für die Stelle als {job} bei {name}. Schreib wie ein Mensch, kein Spam."
-                    try:
-                        response = model.generate_content(prompt)
-                        st.code(response.text, language="text")
-                    except:
-                        st.error("مشكل فـ الساروت، تأكد منه.")
-                else:
-                    st.warning("⚠️ دخل API Key فـ الجنب باش نكتب ليك الرسالة.")
-                st.divider()
-        else:
-            st.warning("مالقينا والو، جرب كلمات أبسط.")
+if st.button("بدأ البحث"):
+    if job and city and user_api_key:
+        try:
+            # إعداد Gemini
+            genai.configure(api_key=user_api_key.strip()) # strip كتحيد الفراغات الزايدة
+            model = genai.GenerativeModel('gemini-1.5-flash') # نسخة سريعة ومجانية
+            
+            url = f"https://www.gelbeseiten.de/suche/{job}/{city}"
+            r = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
+            soup = BeautifulSoup(r.text, 'html.parser')
+            articles = soup.find_all('article', class_='mod-Treffer')
+            
+            if articles:
+                st.success(f"✅ لقينا {len(articles)} شركة.")
+                for i in articles[:3]:
+                    name = i.find('h2').text.strip()
+                    st.subheader(f"🏢 {name}")
+                    
+                    # طلب الرسالة
+                    prompt = f"Schreibe eine kurze, authentische Bewerbung als {job} bei {name}."
+                    response = model.generate_content(prompt)
+                    st.info("✉️ الرسالة المقترحة:")
+                    st.write(response.text)
+                    st.divider()
+            else:
+                st.warning("⚠️ مالقيت حتى شركة، جرب مهنة أخرى.")
+        except Exception as e:
+            # هاد السطر غايطبع لينا الخطأ الحقيقي باش نحلوه
+            st.error(f"❌ وقع خطأ: {str(e)}")
     else:
-        st.error("عافاك دخل المهنة والمدينة.")
+        st.error("⚠️ عافاك دخل المعلومات كاملة والساروت.")
