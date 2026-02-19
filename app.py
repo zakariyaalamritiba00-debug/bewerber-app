@@ -16,9 +16,9 @@ city = st.text_input("المدينة (مثلاً: Berlin):")
 if st.button("بدأ البحث"):
     if job and city and user_api_key:
         try:
-            # إعداد Gemini
-            genai.configure(api_key=user_api_key.strip()) # strip كتحيد الفراغات الزايدة
-            model = genai.GenerativeModel('gemini-1.5-flash') # نسخة سريعة ومجانية
+            # استعملنا gemini-pro حيت هي اللي مضمونة تخدم ليك دابا
+            genai.configure(api_key=user_api_key.strip())
+            model = genai.GenerativeModel('gemini-pro') 
             
             url = f"https://www.gelbeseiten.de/suche/{job}/{city}"
             r = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -31,16 +31,15 @@ if st.button("بدأ البحث"):
                     name = i.find('h2').text.strip()
                     st.subheader(f"🏢 {name}")
                     
-                    # طلب الرسالة
-                    prompt = f"Schreibe eine kurze, authentische Bewerbung als {job} bei {name}."
+                    # طلب الرسالة بأسلوب بشري
+                    prompt = f"Schreibe eine kurze, authentische Bewerbung als {job} bei {name}. Schreib wie ein Mensch, kein Spam."
                     response = model.generate_content(prompt)
                     st.info("✉️ الرسالة المقترحة:")
                     st.write(response.text)
                     st.divider()
             else:
-                st.warning("⚠️ مالقيت حتى شركة، جرب مهنة أخرى.")
+                st.warning("⚠️ مالقيت والو.")
         except Exception as e:
-            # هاد السطر غايطبع لينا الخطأ الحقيقي باش نحلوه
             st.error(f"❌ وقع خطأ: {str(e)}")
     else:
         st.error("⚠️ عافاك دخل المعلومات كاملة والساروت.")
