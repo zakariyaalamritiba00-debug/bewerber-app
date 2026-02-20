@@ -3,4 +3,3 @@ google-generativeai
 requests
 beautifulsoup4
 googlesearch-python
-pandas
