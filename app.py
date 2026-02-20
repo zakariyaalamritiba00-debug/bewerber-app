@@ -3,18 +3,17 @@ import requests
 from bs4 import BeautifulSoup
 import google.generativeai as genai
 
-# إعداد الصفحة
-st.set_page_config(page_title="Job Search AI 2026", layout="wide")
+# إعداد واجهة الموقع
+st.set_page_config(page_title="Job Assistant Pro", layout="wide")
 st.title("🚀 مساعد زكرياء الذكي")
 
 # القائمة الجانبية
 with st.sidebar:
     st.header("🔑 إعدادات الأمان")
-    # الخانة غتكون خاوية باش تدخل الساروت الجديد ديالك
     user_api_key = st.text_input("لصق Gemini API Key هنا:", type="password")
-    st.info("💡 استعمل الساروت اللي صاوبتي اليوم.")
+    st.info("💡 استعمل الساروت الجديد اللي صاوبتي.")
 
-# واجهة البحث
+# خانات البحث
 col1, col2 = st.columns(2)
 with col1:
     job = st.text_input("المهنة (مثلاً: Koch):")
@@ -24,14 +23,15 @@ with col2:
 if st.button("بدأ البحث وكتابة الرسائل"):
     if job and city and user_api_key:
         try:
-            # الحل السحري لمشكل 404
+            # --- هادا هو السطر اللي غايحل مشكل 404 نهائياً ---
             genai.configure(api_key=user_api_key.strip(), transport='rest')
+            
+            # كنعيطو للموديل نيشأن بلا v1beta بلا والو
             model = genai.GenerativeModel('gemini-1.5-flash')
             
-            # البحث
+            # عملية البحث فـ Gelbe Seiten
             url = f"https://www.gelbeseiten.de/suche/{job}/{city}"
-            headers = {'User-Agent': 'Mozilla/5.0'}
-            r = requests.get(url, headers=headers)
+            r = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
             soup = BeautifulSoup(r.text, 'html.parser')
             articles = soup.find_all('article', class_='mod-Treffer')
             
@@ -42,15 +42,16 @@ if st.button("بدأ البحث وكتابة الرسائل"):
                     st.subheader(f"🏢 {name}")
                     
                     # طلب الرسالة
-                    prompt = f"Schreibe eine kurze, authentische Bewerbung als {job} bei {name}. Schreib wie ein Mensch, maximal 4 Sätze."
+                    prompt = f"Schreibe eine kurze Bewerbung als {job} bei {name}. Maximal 4 Sätze."
                     response = model.generate_content(prompt)
                     
                     st.info("✉️ الرسالة المقترحة:")
                     st.write(response.text)
                     st.divider()
             else:
-                st.warning("⚠️ مالقينا والو، جرب كلمات أخرى.")
+                st.warning("⚠️ مالقيت والو فالبحث.")
         except Exception as e:
+            # هاد المسج غايأكد لينا النجاح
             st.error(f"❌ مشكل تقني: {str(e)}")
     else:
         st.error("⚠️ عافاك دخل الساروت والمعلومات.")
