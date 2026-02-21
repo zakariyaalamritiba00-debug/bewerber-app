@@ -9,101 +9,133 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 import time
 import random
-from googlesearch import search
 from duckduckgo_search import DDGS
+from urllib.parse import urljoin
 
-# --- بيانات السيرفر ---
+# --- إعدادات زكرياء الخاصة ---
 G_KEY = "AIzaSyAwfjDDb5Z6_Its2_VrkXKnl3xVcLJP83I"
 G_USER = "zakariyaa.lamritiba00@gmail.com"
 G_PASS = "fxetfhxnttiebrll"
 A_CODE = "zakariya2026"
 
-def get_links_pro(query):
+# قائمة المتصفحات للتمويه العالي
+AGENTS = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0'
+]
+
+def pro_search(job, city):
+    query = f'site:.de "Ausbildung" "{job}" "{city}" "E-Mail" -site:xing.com -site:linkedin.com'
     links = []
-    # محاولة البحث في DuckDuckGo أولاً لأنه لا يحظر
     try:
         with DDGS() as ddgs:
-            # زيادة دقة البحث
-            results = ddgs.text(f"{query} Germany", region='de-de', safesearch='off')
-            links = [r['href'] for r in results if 'google' not in r['href']][:15]
+            # البحث في نطاق ألمانيا لضمان الدقة
+            results = ddgs.text(query, region='de-de', safesearch='off', timelimit='m')
+            links = [r['href'] for r in results if 'zhihu' not in r['href']]
     except Exception as e:
-        st.write(f"⚠️ DDG Delay: {e}")
-        # إذا فشل، جرب جوجل كخطة بديلة
-        try:
-            links = list(search(query, num_results=10, lang="de"))
-        except: pass
-    return list(set(links))
+        st.error(f"📡 تنبيه المحرك: {e}")
+    return list(set(links))[:20]
 
-def extract_email_smart(url):
+def deep_scan_email(url):
+    emails = set()
     try:
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-        r = requests.get(url, timeout=8, headers=headers)
-        # استخراج الإيميلات من النص الخام
-        emails = re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', r.text)
-        return list(set([e for e in emails if not e.lower().endswith(('.png', '.jpg', '.svg'))]))
-    except: return []
+        h = {'User-Agent': random.choice(AGENTS)}
+        r = requests.get(url, timeout=12, headers=h)
+        # مسح الصفحة الأساسية
+        found = re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', r.text)
+        for e in found:
+            if not e.lower().endswith(('.png', '.jpg', '.gif', '.svg', 'wix.com')):
+                emails.add(e)
+        
+        # البحث عن صفحة الاتصال إذا لم يجد شيئاً
+        if not emails:
+            soup = BeautifulSoup(r.text, 'html.parser')
+            for a in soup.find_all('a', href=True):
+                t = a.text.lower()
+                hr = a['href'].lower()
+                if any(x in t or x in hr for x in ['impressum', 'kontakt', 'legal']):
+                    target = urljoin(url, a['href'])
+                    res = requests.get(target, timeout=7, headers=h)
+                    found_sub = re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', res.text)
+                    for e in found_sub:
+                        if not e.lower().endswith(('.png', '.jpg')): emails.add(e)
+    except: pass
+    return list(emails)
 
-st.set_page_config(page_title="Zakariya Job Hunter PRO", layout="wide")
+# --- واجهة المنصة v50 ---
+st.set_page_config(page_title="ZAKARIYA TITAN v50", page_icon="🎯", layout="wide")
 
 if "auth" not in st.session_state: st.session_state.auth = False
+
 if not st.session_state.auth:
-    st.title("🛡️ نظام زكرياء الاحترافي v10.1")
-    if st.text_input("كود الدخول:", type="password") == A_CODE:
+    st.title("🔒 Titan Secure Login")
+    if st.text_input("Master Password:", type="password") == A_CODE:
         st.session_state.auth = True
         st.rerun()
 else:
-    st.sidebar.title("🎮 لوحة التحكم")
-    city = st.sidebar.text_input("📍 المدينة (بالألمانية):", "Berlin")
-    job = st.sidebar.text_input("🎯 المهنة (بالألمانية):", "Koch")
-    cv_file = st.sidebar.file_uploader("📄 ارفع CV ديالك:", type="pdf")
+    st.title("🤖 Zakariya Titan v50.0")
+    st.markdown("---")
     
-    if st.button("🔥 إطلاق السيسطيم الشامل"):
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        job = st.text_input("🎯 المهنة (بالألمانية):", "Koch")
+    with col2:
+        city = st.text_input("📍 المدينة (بالألمانية):", "Berlin")
+    with col3:
+        cv = st.file_uploader("📄 ارفع CV ديالك:", type="pdf")
+
+    st.sidebar.header("📊 إحصائيات الماكينة")
+    mode = st.sidebar.select_slider("طور العمل:", options=["هادئ", "فعال", "هجومي"])
+
+    if st.button("🚀 إطلاق رادار القنص"):
         genai.configure(api_key=G_KEY, transport='rest')
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        ai = genai.GenerativeModel('gemini-1.5-flash')
         
-        # كلمات بحث ألمانية محضة لضمان النتائج
-        search_query = f'Ausbildung {job} {city} "E-Mail"'
-        st.info(f"📡 جاري القنص بكلمة: {search_query}")
-        
-        links = get_links_pro(search_query)
-        
+        links = pro_search(job, city)
         if not links:
-            st.error("❌ محركات البحث لم تعطي نتائج. جرب مدينة أخرى أو مهنة قريبة.")
+            st.warning("⚠️ لم يتم العثور على أهداف جديدة. جرب تغيير المدينة.")
         else:
-            found_emails = 0
-            for link in links:
-                with st.status(f"🌐 فحص الموقع: {link}"):
-                    emails = extract_email_smart(link)
+            success = 0
+            progress = st.progress(0)
+            
+            for i, link in enumerate(links):
+                with st.expander(f"🔍 فحص: {link}", expanded=False):
+                    emails = deep_scan_email(link)
                     if emails:
-                        target = emails[0]
-                        st.write(f"✅ لقينا: {target}")
+                        email_to = emails[0]
+                        st.write(f"✅ تم رصد الهدف: {email_to}")
                         
-                        # إنشاء الرسالة بالذكاء الاصطناعي
-                        prompt = f"Write a professional, very short German application for Ausbildung as {job} in {city}. Mention I am highly motivated. Sign as Zakariya."
-                        res = model.generate_content(prompt)
+                        # توليد رسالة احترافية
+                        prompt = f"Write a professional, short German cover letter for Ausbildung as {job} in {city}. Use high-level B2 German. Sign as Zakariya."
+                        content = ai.generate_content(prompt).text
                         
                         # إرسال الإيميل
                         msg = MIMEMultipart()
                         msg['Subject'] = f"Bewerbung um einen Ausbildungsplatz als {job}"
                         msg['From'] = G_USER
-                        msg['To'] = target
-                        msg.attach(MIMEText(res.text, 'plain'))
+                        msg['To'] = email_to
+                        msg.attach(MIMEText(content, 'plain'))
                         
-                        if cv_file:
-                            cv_file.seek(0)
-                            part = MIMEApplication(cv_file.read(), Name=cv_file.name)
-                            part['Content-Disposition'] = f'attachment; filename="Lebenslauf_Zakariya.pdf"'
+                        if cv:
+                            cv.seek(0)
+                            part = MIMEApplication(cv.read(), Name="Lebenslauf_Zakariya.pdf")
+                            part['Content-Disposition'] = 'attachment; filename="Lebenslauf_Zakariya.pdf"'
                             msg.attach(part)
-                            cv_file.seek(0)
-
+                            cv.seek(0)
+                        
                         try:
-                            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-                                server.login(G_USER, G_PASS)
-                                server.sendmail(G_USER, target, msg.as_string())
-                            st.success(f"📧 صيفطنا بنجاح لـ {target}")
-                            found_emails += 1
-                            time.sleep(random.randint(45, 90))
-                        except: st.write("❌ مشكل في الإرسال.")
+                            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as s:
+                                s.login(G_USER, G_PASS)
+                                s.sendmail(G_USER, email_to, msg.as_string())
+                            st.success("📧 تم الإرسال بنجاح!")
+                            success += 1
+                            # تأخير ذكي
+                            wait = 100 if mode == "هادئ" else 60 if mode == "فعال" else 30
+                            time.sleep(wait + random.randint(5, 15))
+                        except: st.error("❌ فشل في SMTP")
+                    else: st.write("⚠️ لم يتم العثور على بريد إلكتروني.")
+                progress.progress((i + 1) / len(links))
             
             st.balloons()
-            st.success(f"🎯 المهمة انتهت! تم التواصل مع {found_emails} شركة.")
+            st.success(f"🎯 المجموع النهائي: قنصنا {success} شركة بنجاح!")
